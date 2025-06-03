@@ -1,6 +1,7 @@
 import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:scroll_to/build_context_extension.dart';
 import 'package:scroll_to/item.dart';
 
 class HomePage extends StatelessWidget {
@@ -77,6 +78,8 @@ class _Data extends StatefulWidget {
 
 class _DataState extends State<_Data> {
   late Map<CategoryItem, GlobalKey> _cache;
+  late ScrollController _controller;
+  late VoidCallback _callback;
 
   Future<void> _scrollTo(GlobalKey key) async {
     await Scrollable.ensureVisible(
@@ -92,62 +95,114 @@ class _DataState extends State<_Data> {
     _cache = <CategoryItem, GlobalKey>{
       for (final category in widget.items.categories) category: GlobalKey(),
     };
+    _controller = ScrollController();
+    _callback = () {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          debugPrint('---------------------------------------------------');
+          final items = context
+              .whereChildWidgets(
+                (element) => element.widget.runtimeType == _ItemView,
+                canOnlySearchVisibleChildren: true,
+              )
+              .cast<_ItemView>()
+              .map((widget) => widget.item);
+          debugPrint('items(${items.length})');
+          debugPrint('---------------------------------------------------');
+        }
+      });
+    };
+    _controller.addListener(_callback);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_callback);
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        SizedBox(
-          height: 50.0,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _cache.keys.length,
-            itemBuilder: (_, index) {
-              final category = _cache.keys.toList()[index];
-              return Padding(
-                padding: const EdgeInsets.only(left: 16.0),
-                child: GestureDetector(
-                  onTap: () async => _scrollTo(_cache[category]!),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: Text(category.label),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.black12,
+                width: 2.0,
+              ),
+            ),
+          ),
+          child: SizedBox(
+            height: 50.0,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16.0),
+              itemCount: _cache.keys.length,
+              itemBuilder: (_, index) {
+                final category = _cache.keys.toList()[index];
+                return Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: GestureDetector(
+                    onTap: () async => _scrollTo(_cache[category]!),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: Text(category.label),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
-        const Divider(),
         Expanded(
           child: CustomScrollView(
+            controller: _controller,
             slivers: <Widget>[
               for (final item in widget.items)
-                SliverToBoxAdapter(
-                  key: item.map(
+                _ItemView(
+                  item,
+                  key: item.map<GlobalKey?>(
                     category: (type) => _cache[type],
                     product: (_) => null,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: item.when(
-                      category: (_, label) => Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Text(label),
-                      ),
-                      product: (_, label, ___) => Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: ListTile(
-                          title: Text(label),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ItemView extends StatelessWidget {
+  const _ItemView(
+    this.item, {
+    super.key,
+  });
+
+  final Item item;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: item.when<Widget>(
+          category: (_, label) => Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Text(label),
+          ),
+          product: (_, label, ___) => Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: ListTile(
+              title: Text(label),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

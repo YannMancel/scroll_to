@@ -97,7 +97,7 @@ extension ItemExt on Item {
 extension ItemsExt on Iterable<Item> {
   Iterable<CategoryItem> get categories {
     return where(
-      (item) => item.map(
+      (item) => item.map<bool>(
         category: (_) => true,
         product: (_) => false,
       ),
