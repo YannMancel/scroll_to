@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:scroll_to/build_context_extension.dart';
 import 'package:scroll_to/item.dart';
+import 'package:scroll_to/selected_category_controller.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({
@@ -78,8 +79,9 @@ class _Data extends StatefulWidget {
 
 class _DataState extends State<_Data> {
   late Map<CategoryItem, GlobalKey> _cache;
-  late ScrollController _controller;
-  late VoidCallback _callback;
+  late ScrollController _scrollController;
+  late VoidCallback _onScroll;
+  late SelectedCategoryController _selectedCategoryController;
 
   Future<void> _scrollTo(GlobalKey key) async {
     await Scrollable.ensureVisible(
@@ -95,30 +97,33 @@ class _DataState extends State<_Data> {
     _cache = <CategoryItem, GlobalKey>{
       for (final category in widget.items.categories) category: GlobalKey(),
     };
-    _controller = ScrollController();
-    _callback = () {
+    _onScroll = () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
-          debugPrint('---------------------------------------------------');
-          final items = context
+          _selectedCategoryController.visibleItems = context
               .whereChildWidgets(
                 (element) => element.widget.runtimeType == _ItemView,
                 canOnlySearchVisibleChildren: true,
               )
               .cast<_ItemView>()
-              .map((widget) => widget.item);
-          debugPrint('items(${items.length})');
-          debugPrint('---------------------------------------------------');
+              .map((widget) => widget.item)
+              .toList();
         }
       });
     };
-    _controller.addListener(_callback);
+    _scrollController = ScrollController()..addListener(_onScroll);
+    _selectedCategoryController = SelectedCategoryControllerImpl(
+      allItems: widget.items.toList(),
+    );
+    _onScroll();
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_callback);
-    _controller.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    _selectedCategoryController.dispose();
     super.dispose();
   }
 
@@ -137,29 +142,38 @@ class _DataState extends State<_Data> {
           ),
           child: SizedBox(
             height: 50.0,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 16.0),
-              itemCount: _cache.keys.length,
-              itemBuilder: (_, index) {
-                final category = _cache.keys.toList()[index];
-                return Padding(
-                  padding: const EdgeInsets.only(left: 16.0),
-                  child: GestureDetector(
-                    onTap: () async => _scrollTo(_cache[category]!),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      child: Text(category.label),
+            child: ValueListenableBuilder(
+              valueListenable: _selectedCategoryController.selectedCategory,
+              builder: (_, selectedCategory, __) => ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(right: 16.0),
+                itemCount: _cache.keys.length,
+                itemBuilder: (_, index) {
+                  final category = _cache.keys.toList()[index];
+                  final isSelected = category == selectedCategory;
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: GestureDetector(
+                      onTap: () async => _scrollTo(_cache[category]!),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Text(
+                          category.label,
+                          style: TextStyle(
+                            color: isSelected ? Colors.blue : null,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
         Expanded(
           child: CustomScrollView(
-            controller: _controller,
+            controller: _scrollController,
             slivers: <Widget>[
               for (final item in widget.items)
                 _ItemView(
