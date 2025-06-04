@@ -49,6 +49,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(title),
+        centerTitle: true,
       ),
       body: FutureBuilder<Iterable<Item>>(
         future: _getItems(),
@@ -58,7 +59,7 @@ class HomePage extends StatelessWidget {
                   child: Text('error'),
                 )
               : snapshot.hasData
-                  ? _Data(items: snapshot.data!)
+                  ? _DataView(items: snapshot.data!)
                   : Center(
                       child: CircularProgressIndicator(),
                     );
@@ -68,16 +69,16 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _Data extends StatefulWidget {
-  const _Data({required this.items});
+class _DataView extends StatefulWidget {
+  const _DataView({required this.items});
 
   final Iterable<Item> items;
 
   @override
-  State<_Data> createState() => _DataState();
+  State<_DataView> createState() => _DataViewState();
 }
 
-class _DataState extends State<_Data> {
+class _DataViewState extends State<_DataView> {
   late Map<CategoryItem, GlobalKey> _cache;
   late ScrollController _scrollController;
   late VoidCallback _onScroll;
@@ -129,6 +130,8 @@ class _DataState extends State<_Data> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedColor = theme.colorScheme.primary;
     return Column(
       children: <Widget>[
         DecoratedBox(
@@ -141,7 +144,7 @@ class _DataState extends State<_Data> {
             ),
           ),
           child: SizedBox(
-            height: 50.0,
+            height: 55.0,
             child: ValueListenableBuilder(
               valueListenable: _selectedCategoryController.selectedCategory,
               builder: (_, selectedCategory, __) => ListView.builder(
@@ -155,12 +158,25 @@ class _DataState extends State<_Data> {
                     padding: const EdgeInsets.only(left: 16.0),
                     child: GestureDetector(
                       onTap: () async => _scrollTo(_cache[category]!),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        child: Text(
-                          category.label,
-                          style: TextStyle(
-                            color: isSelected ? Colors.blue : null,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isSelected
+                                  ? selectedColor
+                                  : Colors.transparent,
+                              width: 2.0,
+                            ),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: Text(
+                            category.label,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isSelected ? selectedColor : null,
+                              fontWeight: isSelected ? FontWeight.bold : null,
+                            ),
                           ),
                         ),
                       ),
@@ -183,6 +199,9 @@ class _DataState extends State<_Data> {
                     product: (_) => null,
                   ),
                 ),
+              const SliverToBoxAdapter(
+                child: SizedBox.square(dimension: 16.0),
+              )
             ],
           ),
         ),
@@ -201,18 +220,33 @@ class _ItemView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    return SliverPadding(
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 16.0,
+      ),
+      sliver: SliverToBoxAdapter(
         child: item.when<Widget>(
           category: (_, label) => Padding(
-            padding: const EdgeInsets.only(top: 16.0),
-            child: Text(label),
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(
+              label,
+              style: textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          product: (_, label, ___) => Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: ListTile(
-              title: Text(label),
+          product: (_, label, ___) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                label,
+                style: textTheme.titleMedium,
+              ),
             ),
           ),
         ),
