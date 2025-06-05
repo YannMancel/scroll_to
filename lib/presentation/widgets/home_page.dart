@@ -73,7 +73,8 @@ class _DataViewState extends State<_DataView> {
           _selectedCategoryController.visibleItems = context
               .whereChildWidgets(
                 (element) => element.widget.runtimeType == _ItemView,
-                canOnlySearchVisibleChildren: true,
+                canOnlySearchOnVisibleElements: true,
+                canContinueToSearchIntoChildElementsIfTestIsValid: false,
               )
               .cast<_ItemView>()
               .map((widget) => widget.item)

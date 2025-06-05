@@ -4,7 +4,8 @@ import 'package:scroll_to/domain/entities/element_node.dart';
 extension BuildContextExt on BuildContext {
   List<Widget> whereChildWidgets(
     ConditionalElementVisitor test, {
-    bool canOnlySearchVisibleChildren = false,
+    bool canOnlySearchOnVisibleElements = false,
+    bool canContinueToSearchIntoChildElementsIfTestIsValid = true,
   }) {
     final elements = <Element>[];
     final children = <Widget>[];
@@ -12,21 +13,27 @@ extension BuildContextExt on BuildContext {
     visitChildElements((element) {
       final isNotVisibleElement =
           element.renderObject?.paintBounds.size.isEmpty ?? true;
+      if (canOnlySearchOnVisibleElements && isNotVisibleElement) return;
 
-      if (canOnlySearchVisibleChildren && isNotVisibleElement) return;
+      final isValidTest = test(element);
+      if (isValidTest) children.add(element.widget);
 
+      if (isValidTest && !canContinueToSearchIntoChildElementsIfTestIsValid) {
+        return;
+      }
       elements.add(element);
-      if (test(element)) children.add(element.widget);
     });
 
-    if (elements.isEmpty) return const <Widget>[];
+    if (elements.isEmpty) return children;
 
     return <Widget>[
       ...children,
       for (final element in elements)
         ...element.whereChildWidgets(
           test,
-          canOnlySearchVisibleChildren: canOnlySearchVisibleChildren,
+          canOnlySearchOnVisibleElements: canOnlySearchOnVisibleElements,
+          canContinueToSearchIntoChildElementsIfTestIsValid:
+              canContinueToSearchIntoChildElementsIfTestIsValid,
         ),
     ];
   }
