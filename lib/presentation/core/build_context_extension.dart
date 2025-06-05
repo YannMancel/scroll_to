@@ -1,49 +1,39 @@
 import 'package:flutter/widgets.dart';
-import 'package:scroll_to/domain/entities/element_node.dart';
 
 extension BuildContextExt on BuildContext {
-  List<Widget> whereChildWidgets(
+  List<Element> whereChildElements(
     ConditionalElementVisitor test, {
-    bool canOnlySearchVisibleChildren = false,
+    bool canOnlySearchOnVisibleElements = false,
+    bool canContinueToSearchIntoChildElementsIfTestIsValid = true,
   }) {
-    final elements = <Element>[];
-    final children = <Widget>[];
+    final childElements = <Element>[];
+    final validElements = <Element>[];
 
     visitChildElements((element) {
       final isNotVisibleElement =
           element.renderObject?.paintBounds.size.isEmpty ?? true;
+      if (canOnlySearchOnVisibleElements && isNotVisibleElement) return;
 
-      if (canOnlySearchVisibleChildren && isNotVisibleElement) return;
+      final isValidTest = test(element);
+      if (isValidTest) validElements.add(element);
 
-      elements.add(element);
-      if (test(element)) children.add(element.widget);
+      if (isValidTest && !canContinueToSearchIntoChildElementsIfTestIsValid) {
+        return;
+      }
+      childElements.add(element);
     });
 
-    if (elements.isEmpty) return const <Widget>[];
+    if (childElements.isEmpty) return validElements;
 
-    return <Widget>[
-      ...children,
-      for (final element in elements)
-        ...element.whereChildWidgets(
+    return <Element>[
+      ...validElements,
+      for (final element in childElements)
+        ...element.whereChildElements(
           test,
-          canOnlySearchVisibleChildren: canOnlySearchVisibleChildren,
+          canOnlySearchOnVisibleElements: canOnlySearchOnVisibleElements,
+          canContinueToSearchIntoChildElementsIfTestIsValid:
+              canContinueToSearchIntoChildElementsIfTestIsValid,
         ),
     ];
-  }
-
-  ElementNode get elementNodes {
-    final childElements = <Element>[];
-    visitChildElements(
-      (element) => childElements.add(element),
-    );
-
-    if (childElements.isEmpty) return NoChildNode(this as Element);
-
-    return ChildrenNode(
-      this as Element,
-      nodes: <ElementNode>[
-        for (final element in childElements) element.elementNodes,
-      ],
-    );
   }
 }

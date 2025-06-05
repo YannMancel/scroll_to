@@ -50,7 +50,7 @@ class _DataView extends StatefulWidget {
 class _DataViewState extends State<_DataView> {
   late Map<CategoryItem<String>, GlobalKey> _cache;
   late ScrollController _scrollController;
-  late VoidCallback _onScroll;
+  late VoidCallback _searchVisibleWidgets;
   late SelectedCategoryController<String> _selectedCategoryController;
 
   Future<void> _scrollTo(GlobalKey key) async {
@@ -67,31 +67,38 @@ class _DataViewState extends State<_DataView> {
     _cache = <CategoryItem<String>, GlobalKey>{
       for (final category in widget.items.categories) category: GlobalKey(),
     };
-    _onScroll = () {
+    _searchVisibleWidgets = () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
+          // [A] No optimization .......... (19819 elements) .... 0:00:00.024070
+          // [B] Visible elements ........... (476 elements) .... 0:00:00.000804
+          // [C] Break after visible elements (217 elements) .... 0:00:00.000461
+          //
+          // [A]
+          // [B] ------> 3,34% de A
+          // [C] ------> 1,91% de A et 57,33% de B
           _selectedCategoryController.visibleItems = context
-              .whereChildWidgets(
+              .whereChildElements(
                 (element) => element.widget.runtimeType == _ItemView,
-                canOnlySearchVisibleChildren: true,
+                canOnlySearchOnVisibleElements: true,
+                canContinueToSearchIntoChildElementsIfTestIsValid: false,
               )
-              .cast<_ItemView>()
-              .map((widget) => widget.item)
+              .map((element) => (element.widget as _ItemView).item)
               .toList();
         }
       });
     };
-    _scrollController = ScrollController()..addListener(_onScroll);
+    _scrollController = ScrollController()..addListener(_searchVisibleWidgets);
     _selectedCategoryController = SelectedCategoryControllerImpl<String>(
       allItems: widget.items.toList(),
     );
-    _onScroll();
+    _searchVisibleWidgets();
   }
 
   @override
   void dispose() {
     _scrollController
-      ..removeListener(_onScroll)
+      ..removeListener(_searchVisibleWidgets)
       ..dispose();
     _selectedCategoryController.dispose();
     super.dispose();
