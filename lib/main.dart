@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:scroll_to/home_page.dart';
+import 'package:scroll_to/presentation/widgets/home_page.dart';
 
 void main() => runApp(const MyApp());
 
