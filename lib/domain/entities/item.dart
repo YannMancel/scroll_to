@@ -1,21 +1,21 @@
 import 'package:flutter/foundation.dart';
 
 @immutable
-sealed class Item {
+sealed class Item<T> {
   const Item(
     this.index, {
-    required this.label,
+    required this.value,
   });
 
   final int index;
-  final String label;
+  final T value;
 }
 
 @immutable
-class CategoryItem extends Item {
+class CategoryItem<T> extends Item<T> {
   const CategoryItem(
     super.index, {
-    required super.label,
+    required super.value,
   });
 
   @override
@@ -24,7 +24,7 @@ class CategoryItem extends Item {
         (runtimeType == other.runtimeType &&
             other is CategoryItem &&
             index == other.index &&
-            label == other.label);
+            value == other.value);
   }
 
   @override
@@ -33,17 +33,17 @@ class CategoryItem extends Item {
       <Object?>[
         runtimeType,
         index,
-        label,
+        value,
       ],
     );
   }
 }
 
 @immutable
-class ProductItem extends Item {
+class ProductItem<T> extends Item<T> {
   const ProductItem(
     super.index, {
-    required super.label,
+    required super.value,
     required this.subIndex,
   });
 
@@ -55,7 +55,7 @@ class ProductItem extends Item {
         (runtimeType == other.runtimeType &&
             other is ProductItem &&
             index == other.index &&
-            label == other.label &&
+            value == other.value &&
             subIndex == other.subIndex);
   }
 
@@ -65,42 +65,42 @@ class ProductItem extends Item {
       <Object?>[
         runtimeType,
         index,
-        label,
+        value,
         subIndex,
       ],
     );
   }
 }
 
-extension ItemExt on Item {
-  T when<T>({
-    required T Function(int index, String label) category,
-    required T Function(int index, String label, int subIndex) product,
+extension ItemExt<T> on Item<T> {
+  R when<R>({
+    required R Function(int index, T value) category,
+    required R Function(int index, T value, int subIndex) product,
   }) {
     return switch (this) {
-      CategoryItem() => category(index, label),
-      ProductItem(:final subIndex) => product(index, label, subIndex),
+      CategoryItem<T>() => category(index, value),
+      ProductItem<T>(:final subIndex) => product(index, value, subIndex),
     };
   }
 
-  T map<T>({
-    required T Function(CategoryItem type) category,
-    required T Function(ProductItem type) product,
+  R map<R>({
+    required R Function(CategoryItem<T> type) category,
+    required R Function(ProductItem<T> type) product,
   }) {
     return switch (this) {
-      CategoryItem() => category(this as CategoryItem),
-      ProductItem() => product(this as ProductItem),
+      CategoryItem<T>() => category(this as CategoryItem<T>),
+      ProductItem<T>() => product(this as ProductItem<T>),
     };
   }
 }
 
-extension ItemsExt on Iterable<Item> {
-  Iterable<CategoryItem> get categories {
+extension ItemsExt<T> on Iterable<Item<T>> {
+  Iterable<CategoryItem<T>> get categories {
     return where(
       (item) => item.map<bool>(
         category: (_) => true,
         product: (_) => false,
       ),
-    ).cast<CategoryItem>();
+    ).cast<CategoryItem<T>>();
   }
 }

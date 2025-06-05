@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:scroll_to/element_node.dart';
+import 'package:scroll_to/domain/entities/element_node.dart';
 
 extension BuildContextExt on BuildContext {
   List<Widget> whereChildWidgets(
