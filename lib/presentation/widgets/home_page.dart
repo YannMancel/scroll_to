@@ -70,6 +70,13 @@ class _DataViewState extends State<_DataView> {
     _onScroll = () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
+          // [A] No optimization .......... (19819 elements) .... 0:00:00.024070
+          // [B] Visible elements ........... (476 elements) .... 0:00:00.000804
+          // [C] Break after visible elements (217 elements) .... 0:00:00.000461
+          //
+          // [A]
+          // [B] ------> 3,34% de A
+          // [C] ------> 1,91% de A et 57,33% de B
           _selectedCategoryController.visibleItems = context
               .whereChildWidgets(
                 (element) => element.widget.runtimeType == _ItemView,
